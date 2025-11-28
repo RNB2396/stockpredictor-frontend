@@ -2,62 +2,52 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>That Stock Predictor</title>
+    <title>Stock Predictor (Web)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="stylesheet" href="styles.css" />
+    <!-- Plotly for candlestick chart -->
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   </head>
   <body>
-    <div class="app-container">
-      <header class="header">
-        <h1>That Stock Predictor</h1>
-        <p>Daily + next 5 days model-driven view</p>
-      </header>
-
-      <section class="controls">
-        <div class="controls-row">
-          <label for="ticker">Ticker</label>
-          <input
-            id="ticker"
-            type="text"
-            placeholder="AAPL"
-            maxlength="10"
-            autocomplete="off"
-          />
+    <div id="app">
+      <header class="top-bar">
+        <div class="top-left">
+          <label for="ticker">Ticker:</label>
+          <input id="ticker" placeholder="AAPL" />
+          <button id="run-btn">Fetch &amp; Predict</button>
         </div>
 
-        <div class="controls-row">
-          <span>Model</span>
+        <div class="top-right">
+          <span class="model-label">Model:</span>
+
           <label>
-            <input type="radio" name="model" value="xgb" checked />
+            <input
+              type="radio"
+              name="model"
+              value="xgb"
+              checked
+            />
             XGBoost
           </label>
-          <label>
-            <input type="radio" name="model" value="rf" />
-            Random Forest
-          </label>
         </div>
+      </header>
 
-        <button id="run-btn">Run Prediction</button>
-      </section>
-
-      <main class="main-grid">
-        <section class="chart-panel">
-          <div id="chart" class="chart"></div>
+      <main class="main-layout">
+        <section class="chart-section">
+          <div id="chart"></div>
         </section>
 
-        <aside class="info-panel">
-          <section class="metrics-card">
+        <section class="side-panels">
+          <div class="panel metrics-panel">
             <h2>Metrics</h2>
             <pre id="metrics"></pre>
-          </section>
+          </div>
 
-          <section class="payload-card">
-            <h2>Raw Payload (debug)</h2>
+          <div class="panel payload-panel">
+            <h2>Raw Payload</h2>
             <pre id="payload"></pre>
-          </section>
-        </aside>
+          </div>
+        </section>
       </main>
     </div>
 

@@ -14,57 +14,55 @@ async function runPrediction() {
   const modelRadio = document.querySelector('input[name="model"]:checked');
   const model = modelRadio ? modelRadio.value : "xgb";
 
-  runBtn.disabled = true;
-  runBtn.textContent = "Running...";
+  metricsPre.textContent = "Loading...";
+  payloadPre.textContent = "";
+  Plotly.purge("chart");
 
   try {
     const url = `${API_BASE}/api/predict?ticker=${encodeURIComponent(
       ticker
     )}&model=${encodeURIComponent(model)}`;
 
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      const txt = await resp.text();
-      throw new Error(`Backend error: ${resp.status} ${txt}`);
+    const res = await fetch(url);
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(`Backend error: ${res.status} ${msg}`);
     }
 
-    const payload = await resp.json();
-
-    const met = payload.metrics || {};
-    const lines = [
-      `Ticker: ${payload.ticker || ""}`,
-      `Model: ${payload.model || ""}`,
-      "",
-      ...Object.entries(met).map(([k, v]) =>
-        typeof v === "number" ? `${k}: ${v.toFixed(4)}` : `${k}: ${v}`
-      ),
-    ];
-    metricsPre.textContent = lines.join("\n");
-
-    payloadPre.textContent = JSON.stringify(payload, null, 2);
-
-    const hist = payload.history || [];
-    const preds = payload.predictions_next5 || payload.predictions || [];
-    const signals = payload.signals || [];
-    const nextSignal = payload.next_signal || null;
-
-    renderCandles(hist, preds, signals, nextSignal);
+    const payload = await res.json();
+    renderPayload(payload);
   } catch (err) {
     console.error(err);
     metricsPre.textContent = String(err);
-    payloadPre.textContent = "";
-    Plotly.newPlot("chart", [], { title: "Error" });
-  } finally {
-    runBtn.disabled = false;
-    runBtn.textContent = "Run Prediction";
   }
+}
+
+function renderPayload(payload) {
+  const met = payload.metrics || {};
+  const lines = [
+    `Ticker: ${payload.ticker || ""}`,
+    `Model: ${payload.model || ""}`,
+    "",
+    ...Object.entries(met).map(([k, v]) =>
+      typeof v === "number" ? `${k}: ${v.toFixed(4)}` : `${k}: ${v}`
+    ),
+  ];
+  metricsPre.textContent = lines.join("\n");
+
+  payloadPre.textContent = JSON.stringify(payload, null, 2);
+
+  const hist = payload.history || [];
+  const preds = payload.predictions_next5 || payload.predictions || [];
+  const signals = payload.signals || [];
+  renderCandles(hist, preds, signals, payload.next_signal);
 }
 
 function renderCandles(history, preds, signals, nextSignal) {
   const histArr = Array.isArray(history) ? history : [];
   const predArr = Array.isArray(preds) ? preds : [];
+  const sigArr = Array.isArray(signals) ? signals : [];
 
-  if (!histArr.length) {
+  if (!histArr.length && !predArr.length) {
     Plotly.newPlot("chart", [], { title: "No data" });
     return;
   }
@@ -103,60 +101,44 @@ function renderCandles(history, preds, signals, nextSignal) {
       low: predLow,
       close: predClose,
       type: "candlestick",
-      name: "Predicted Next 5",
-      increasing: { line: { color: "green" } },
-      decreasing: { line: { color: "red" } },
+      name: "Predicted (next 5)",
+      increasing: { line: { width: 1.5 } },
+      decreasing: { line: { width: 1.5 } },
     });
   }
 
-  // Historical signals (classifier backtest arrows)
-  if (Array.isArray(signals) && signals.length) {
-    const buyX = [];
-    const buyY = [];
-    const sellX = [];
-    const sellY = [];
+  // Historical arrows
+  if (sigArr.length) {
+    const buys = sigArr.filter((s) => s.side === "buy");
+    const sells = sigArr.filter((s) => s.side === "sell");
 
-    for (const s of signals) {
-      if (!s || !s.date) continue;
-      const price = s.price ?? null;
-      if (s.side === "buy") {
-        buyX.push(s.date);
-        buyY.push(price);
-      } else if (s.side === "sell") {
-        sellX.push(s.date);
-        sellY.push(price);
-      }
-    }
-
-    if (buyX.length) {
+    if (buys.length) {
       traces.push({
-        x: buyX,
-        y: buyY,
+        x: buys.map((s) => s.date),
+        y: buys.map((s) => s.price * 0.995),
         mode: "markers",
-        name: "Historical BUY",
+        name: "Buy",
         marker: {
           symbol: "triangle-up",
-          size: 12,
+          size: 10,
           color: "green",
-          line: { width: 1, color: "black" },
         },
-        hovertemplate: "Historical BUY<br>%{x}<br>%{y}<extra></extra>",
+        hovertemplate: "Buy<br>%{x}<br>%{y}<extra></extra>",
       });
     }
 
-    if (sellX.length) {
+    if (sells.length) {
       traces.push({
-        x: sellX,
-        y: sellY,
+        x: sells.map((s) => s.date),
+        y: sells.map((s) => s.price * 1.005),
         mode: "markers",
-        name: "Historical SELL",
+        name: "Sell",
         marker: {
           symbol: "triangle-down",
-          size: 12,
+          size: 10,
           color: "red",
-          line: { width: 1, color: "black" },
         },
-        hovertemplate: "Historical SELL<br>%{x}<br>%{y}<extra></extra>",
+        hovertemplate: "Sell<br>%{x}<br>%{y}<extra></extra>",
       });
     }
   }
@@ -165,10 +147,6 @@ function renderCandles(history, preds, signals, nextSignal) {
   if (nextSignal) {
     const ns = nextSignal;
     const isBuy = ns.side === "buy";
-    const probText =
-      typeof ns.prob === "number"
-        ? `<br>Confidence: ${(ns.prob * 100).toFixed(1)}%`
-        : "";
 
     traces.push({
       x: [ns.date],
@@ -183,7 +161,6 @@ function renderCandles(history, preds, signals, nextSignal) {
       },
       hovertemplate:
         (isBuy ? "Predicted BUY" : "Predicted SELL") +
-        probText +
         "<br>%{x}<br>%{y}<extra></extra>",
     });
   }
