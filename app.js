@@ -54,18 +54,13 @@ function renderPayload(payload) {
   const hist = payload.history || [];
   const preds = payload.predictions_next5 || payload.predictions || [];
   const signals = payload.signals || [];
-  renderCandles(hist, preds, signals);
+  renderCandles(hist, preds, signals, payload.next_signal);
 }
 
-function renderCandles(history, preds, signals) {
+function renderCandles(history, preds, signals, nextSignal) {
   const histArr = Array.isArray(history) ? history : [];
   const predArr = Array.isArray(preds) ? preds : [];
   const sigArr = Array.isArray(signals) ? signals : [];
-
-  console.log("history len:", histArr.length);
-  console.log("predictions_next5 len:", predArr.length);
-  console.log("signals len:", sigArr.length);
-  console.log("pred samples:", predArr.slice(0, 5));
 
   if (!histArr.length && !predArr.length) {
     Plotly.newPlot("chart", [], { title: "No data" });
@@ -86,18 +81,18 @@ function renderCandles(history, preds, signals) {
 
   const traces = [];
 
-  if (histDates.length) {
-    traces.push({
-      x: histDates,
-      open: histOpen,
-      high: histHigh,
-      low: histLow,
-      close: histClose,
-      type: "candlestick",
-      name: "History",
-    });
-  }
+  // Historical
+  traces.push({
+    x: histDates,
+    open: histOpen,
+    high: histHigh,
+    low: histLow,
+    close: histClose,
+    type: "candlestick",
+    name: "History",
+  });
 
+  // Predicted 5 bars
   if (predDates.length) {
     traces.push({
       x: predDates,
@@ -112,6 +107,7 @@ function renderCandles(history, preds, signals) {
     });
   }
 
+  // Historical arrows
   if (sigArr.length) {
     const buys = sigArr.filter((s) => s.side === "buy");
     const sells = sigArr.filter((s) => s.side === "sell");
@@ -119,7 +115,7 @@ function renderCandles(history, preds, signals) {
     if (buys.length) {
       traces.push({
         x: buys.map((s) => s.date),
-        y: buys.map((s) => s.price * 0.995), 
+        y: buys.map((s) => s.price * 0.995),
         mode: "markers",
         name: "Buy",
         marker: {
@@ -134,7 +130,7 @@ function renderCandles(history, preds, signals) {
     if (sells.length) {
       traces.push({
         x: sells.map((s) => s.date),
-        y: sells.map((s) => s.price * 1.005), 
+        y: sells.map((s) => s.price * 1.005),
         mode: "markers",
         name: "Sell",
         marker: {
@@ -145,6 +141,28 @@ function renderCandles(history, preds, signals) {
         hovertemplate: "Sell<br>%{x}<br>%{y}<extra></extra>",
       });
     }
+  }
+
+  // ----- NEXT-DAY PREDICTED ARROW -----
+  if (nextSignal) {
+    const ns = nextSignal;
+    const isBuy = ns.side === "buy";
+
+    traces.push({
+      x: [ns.date],
+      y: [ns.price],
+      mode: "markers",
+      name: "Next-Day Signal",
+      marker: {
+        symbol: isBuy ? "triangle-up" : "triangle-down",
+        size: 14,
+        color: isBuy ? "limegreen" : "red",
+        line: { width: 1, color: "black" },
+      },
+      hovertemplate:
+        (isBuy ? "Predicted BUY" : "Predicted SELL") +
+        "<br>%{x}<br>%{y}<extra></extra>",
+    });
   }
 
   const layout = {
