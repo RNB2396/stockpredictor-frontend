@@ -1,4 +1,4 @@
-const API_BASE = "https://nutten-author-muze-warcraft.trycloudflare.com";
+const API_BASE = "https://api.thatstockpredictor.com";
 
 const tickerInput = document.getElementById("ticker");
 const runBtn = document.getElementById("run-btn");
