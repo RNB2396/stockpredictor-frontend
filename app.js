@@ -143,7 +143,7 @@ function renderCandles(history, preds, signals, nextSignal) {
     }
   }
 
-  // ----- NEXT-DAY PREDICTED ARROW -----
+  // Next-day predicted arrow
   if (nextSignal) {
     const ns = nextSignal;
     const isBuy = ns.side === "buy";
@@ -165,11 +165,25 @@ function renderCandles(history, preds, signals, nextSignal) {
     });
   }
 
+  const isMobile = window.innerWidth <= 768;
+
   const layout = {
     dragmode: "zoom",
     showlegend: true,
-    legend: { x: 0, y: 1.1, orientation: "h" },
-    margin: { t: 40, r: 10, b: 40, l: 50 },
+    legend: {
+      x: 0.5,
+      xanchor: "center",
+      y: 1.12,
+      yanchor: "bottom",
+      orientation: "h",
+      font: { size: isMobile ? 8 : 10 },
+    },
+    margin: {
+      t: isMobile ? 70 : 40,
+      r: 10,
+      b: 40,
+      l: 50,
+    },
     xaxis: { rangeslider: { visible: false } },
   };
 

@@ -14,17 +14,17 @@ body {
   background: #f2f2f5;
 }
 
-/* App container */
+/* App container (desktop-first) */
 #app {
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 1400px;      /* desktop-centered */
+  max-width: 1400px;
   margin: 0 auto;
   background: #ffffff;
 }
 
-/* Top bar (desktop-first) */
+/* Top bar */
 
 .top-bar {
   display: flex;
@@ -225,12 +225,13 @@ pre {
   .chart-section {
     flex: 0 0 auto;
     width: 100%;
-    height: 260px; /* fixed height for phone chart */
+    height: 420px;          /* taller chart on phone */
     padding: 0.4rem;
   }
 
   #chart {
     height: 100%;
+    min-height: 380px;
   }
 
   .side-panels {
